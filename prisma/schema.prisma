@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        String    @id
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  workers   Worker[]
+  messages  Message[]
+  news_amount Int @default(7)
+  request_times            DateTime[]
+  request_max_symbols      Int @default(110)
+  total_request_amount     Int
+  total_tokens_comp_amount Int
+  total_tokens_emb_amount  Int
+
+  @@map("admin")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  data      String
+  isRead    Boolean  @default(false) @map("is_read")
+  Admin     Admin?   @relation(fields: [adminId], references: [id])
+  adminId   String?
+  Worker    Worker?  @relation(fields: [workerId], references: [id])
+  workerId  String?
+
+  @@map("message")
+}
+
+model Worker {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  messages  Message[]
+  Admin     Admin?    @relation(fields: [adminId], references: [id])
+  adminId   String?
+}
+
