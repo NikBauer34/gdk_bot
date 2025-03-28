@@ -41,7 +41,7 @@ export class AdminService implements OnModuleInit {
                 update: {},
                 create: {
                     id: adminPassword,
-                    request_times: [],
+                    requests_data: [],
                     request_max_symbols: 110,
                     total_request_amount: 0,
                     total_tokens_comp_amount: 0,

@@ -4,9 +4,9 @@ import { SectionsDataType } from './dto/sections.dto';
 @Injectable()
 export class DataService {
   private sectionsData: SectionsDataType[] = [];
-  private postsData: {name: string, url: string, content: string, embedding: number[]}[] = [];
+  private postsData: {id: number, name: string, url: string, content: string, embedding: number[]}[] = [];
 
-  setSectionsData(data: SectionsDataType[]) {
+  setSectionsData(data: SectionsDataType[]): void {
     this.sectionsData = data;
   }
 
@@ -14,11 +14,11 @@ export class DataService {
     return this.sectionsData;
   }
 
-  getPostsData(): {name: string, url: string, content: string, embedding: number[]}[] {
+  getPostsData(): {id: number, name: string, url: string, content: string, embedding: number[]}[] {
     return this.postsData;
   }
 
-  setPostsData(data: {name: string, url: string, content: string, embedding: number[]}[]): void {
+  setPostsData(data: {id: number, name: string, url: string, content: string, embedding: number[]}[]): void {
     this.postsData = data;
   }
 }

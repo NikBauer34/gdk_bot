@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 export class WorkerService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService//NikBauer34
     ) {}
 
     async createWorker(adminId: string) {

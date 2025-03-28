@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { CompData } from 'src/config/api.data';
+import { CompData, FullCompData } from 'src/config/api.data';
 import { YandexApiInterceptor } from './api/api.interceptors';
 import { YandexCompDto, YandexEmbeddingDto } from './dto/yandex.dto';
 
@@ -15,6 +15,7 @@ export class YandexService {
 
     async getComp(question: string): Promise<{text: string, tokens: number}> {
         try {
+
             const response: AxiosResponse<YandexCompDto> = await this.axiosInstance.post('https://llm.api.cloud.yandex.net/foundationModels/v1/completion', {
                 modelUri: this.configService.getOrThrow<string>('yandexApiModelUriComp'),
                 completionOptions: CompData.completionOptions,
@@ -30,6 +31,7 @@ export class YandexService {
                 ]
             }, {
             });
+            console.log(response.data.result.alternatives[0].message.text);
             return {text:response.data.result.alternatives[0].message.text, tokens: response.data.result.usage.totalTokens};
         } catch (error) {
             throw new HttpException('Ошибка при получении ответа от Yandex', HttpStatus.INTERNAL_SERVER_ERROR);
@@ -72,15 +74,21 @@ export class YandexService {
         return dotProduct / (magnitude1 * magnitude2);
       }
     
-    async testComp(text: string): Promise<{text: string, tokens: number}> {
+    async getAnswer(question: string, content: string): Promise<{text: string, tokens: number}> {
         try {
+            console.log(content);
+            console.log(question);
             const response: AxiosResponse<YandexCompDto> = await this.axiosInstance.post('https://llm.api.cloud.yandex.net/foundationModels/v1/completion', {
                 modelUri: this.configService.getOrThrow<string>('yandexApiModelUriComp'),
-                completionOptions: CompData.completionOptions,
+                completionOptions: FullCompData.completionOptions,
                 messages: [
                     {
+                        "role": "system",
+                        "text": "Ты - бот-помощник. Отвечай на вопросы пользователей, используя ТОЛЬКО информацию из предоставленного текста, не используя информацию извне"
+                    },
+                    {
                         "role": "user",
-                        "text": text
+                        "text": `Вот текст, на основе которого нужно ответить на вопрос:\n\n${content}\n\nВопрос: ${question}`
                     }
                 ]
             });

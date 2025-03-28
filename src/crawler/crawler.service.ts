@@ -53,8 +53,8 @@ export class CrawlerService {
                     } else {
                         // Content has changed, create new embedding
                         const embeddingResult = await this.yandexService.getEmbedding(section.name + ' ' + section.description + ' ' + content);
-                        console.log(section.name)
-                        console.log(embeddingResult.tokens)
+                        console.log(`Section "${section.name}" tokens: ${embeddingResult.tokens}`);
+                        console.log(content)
                         embedding = embeddingResult.embedding;
                         tokens = parseInt(embeddingResult.tokens?.toString() || '0');
                         totalEmbeddingTokens += tokens;
@@ -72,6 +72,8 @@ export class CrawlerService {
                     }
                 })
             );
+
+            console.log(`Total tokens for sections: ${totalEmbeddingTokens}`);
 
             // Only update data service and admin tokens if we created any new embeddings
             if (totalEmbeddingTokens > 0) {
@@ -92,28 +94,74 @@ export class CrawlerService {
 
             // Parse and process VK posts
             const groupId = this.configService.getOrThrow<string>('VK_GROUP_ID');
-            const postsText = await this.parserService.parsePosts(groupId);
-            const posts = postsText.split('\n\n').map(post => {
-                const [title, ...contentParts] = post.split('\n');
-                const content = contentParts.join('\n');
-                return {
-                    name: title.replace('Пост: ', ''),
-                    url: '', // VK posts don't have direct URLs
-                    content: content.replace('Фото: ', ''),
-                    embedding: [] // Will be filled in the next step
-                };
-            });
+            const groupNumber = this.configService.getOrThrow<string>('VK_GROUP_NUMBER');
+            const postsText = await this.parserService.parsePosts(groupId, groupNumber);
+            const previousPosts = this.dataService.getPostsData();
+            
+            const posts = postsText.split('\n').map(post => {
+                try {
+                    const [content, idPart, urlPart] = post.split(' | ');
+                    if (!content || !idPart || !urlPart) {
+                        console.error('Invalid post format:', post);
+                        return null;
+                    }
 
-            // Get embeddings for posts
+                    const id = parseInt(idPart.replace('ID: ', ''));
+                    if (isNaN(id)) {
+                        console.error('Invalid post ID:', idPart);
+                        return null;
+                    }
+
+                    const url = urlPart.replace('URL: ', '');
+                    const text = content.replace('Пост: ', '');
+                    
+                    // Check if post already exists
+                    const existingPost = previousPosts.find(p => p.id === id);
+                    
+                    return {
+                        id,
+                        name: text.substring(0, 100) + (text.length > 100 ? '...' : ''), // Use first 100 chars as name
+                        url,
+                        content: text,
+                        embedding: existingPost?.embedding || [] // Reuse existing embedding if available
+                    };
+                } catch (error) {
+                    console.error('Error parsing post:', post, error);
+                    return null;
+                }
+            }).filter((post): post is NonNullable<typeof post> => post !== null);
+
+            // Get embeddings only for new posts
+            totalEmbeddingTokens = 0;
             const postsWithEmbeddings = await Promise.all(posts.map(async (post) => {
-                const embedding = await this.yandexService.getEmbedding(post.name + ' ' + post.content);
-                return {
-                    ...post,
-                    embedding: embedding.embedding
-                };
+                if (post.embedding.length === 0) {
+                    const embedding = await this.yandexService.getEmbedding(post.name + ' ' + post.content);
+                    console.log(`Post "${post.name}" tokens: ${embedding.tokens}`);
+                    console.log(post.content)
+                    totalEmbeddingTokens += Number(embedding.tokens);
+                    return {
+                        ...post,
+                        embedding: embedding.embedding
+                    };
+                }
+                return post;
             }));
 
+            console.log(`Total tokens for posts: ${totalEmbeddingTokens}`);
+
             this.dataService.setPostsData(postsWithEmbeddings);
+
+            // Update admin's embedding tokens for both sections and posts
+            if (totalEmbeddingTokens > 0) {
+                const adminPassword = this.configService.getOrThrow<string>('adminPassword');
+                await this.adminService.updateAdmin(adminPassword, {
+                    total_tokens_emb_amount: {
+                        increment: totalEmbeddingTokens
+                    }
+                });
+
+                this.logger.debug(`Updated ${totalEmbeddingTokens} embedding tokens for admin (sections and posts)`);
+            }
 
             this.logger.debug('Sections data updated successfully');
         } catch (error) {

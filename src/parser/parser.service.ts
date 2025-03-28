@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import * as cheerio from 'cheerio'
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { SECTIONS } from 'src/config/sections';
 @Injectable()
@@ -48,10 +48,8 @@ export class ParserService {
               return;
           }
 
-          if (eventDate <= monthLater) {
               const formattedDate = `${eventDate.getFullYear()}-${(eventDate.getMonth() + 1).toString().padStart(2, '0')}-${eventDate.getDate().toString().padStart(2, '0')}`;
               eventsString += `Событие: ${eventName}, дата: ${formattedDate}; `;
-          }
       });
 
       return eventsString.slice(0, -2);
@@ -63,21 +61,21 @@ export class ParserService {
 }
 async parseNews($: cheerio.CheerioAPI): Promise<string> {
 try {
-let newsString = '';
-        let newsCount = 0;
-        $('.item-content.img-less').each((index, element) => {
-            if (newsCount >= (7)) {
-                return false; // Прерываем цикл .each(), когда достигли лимита
-            }
+  let resultString = "";
+  const newsItems = $('.item-content.img-less, .item-content').slice(0, 10); //выбираем оба класса, и обрезаем до лимита
+  
+  newsItems.each((index, element) => {
+    let newsText = "";
+    $(element).find('p').each((i, p) => {
+      newsText += $(p).text().trim() + " "; // Собираем текст из всех <p> внутри элемента
+    });
 
-            let newsText = $(element).find('p').text().trim(); // Извлекаем текст из всех параграфов внутри новости
-            if (newsText) {
-                newsString += `Новость: ${newsText};`;
-                newsCount++;
-            }
-        });
+    if (newsText) {
+      resultString += `Новость: ${newsText.trim()}; `; // Добавляем к результирующей строке
+    }
+  });
 
-return newsString
+  return resultString.trim();
 }  catch (error) {
   console.error(`Ошибка при парсинге данных: ${error.message}`);
   throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -122,7 +120,9 @@ try {
       const response = await axios.get(absoluteDateLink );
       const html = response.data;
       const $eventPage = cheerio.load(html);
-
+      const now = new Date();
+      const month = String(now.getMonth() + 1).padStart(2, '0'); // Получаем номер месяца (0-11), добавляем 1, форматируем
+  const year = now.getFullYear();
       let eventNames: string[] = [];
 
       // Извлекаем названия событий (из тегов <a> с классом 'item' внутри элемента с классом 'list-item')
@@ -132,7 +132,9 @@ try {
       });
 
       if (eventNames.length > 0) {
-          eventsString += `Дата: ${dateText}, События: ${eventNames.join(', ')}; `;
+          
+            eventNames.forEach((el) => eventsString += `Событие: ${el} проходит: ${dateText}.${month}.${year}; `)
+          
       }
   }
   console.log(eventsString);
@@ -168,12 +170,13 @@ throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
 }
 }
 
-async parsePosts(groupId: string): Promise<string> {
+async parsePosts(groupId: string, groupNumber: string): Promise<string> {
     try {
         const currentDate = new Date();
         const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        
-        const response = await axios.get('https://api.vk.com/method/wall.get?access_token=c575f4c2c575f4c2c575f4c2fac658e1cacc575c575f4c2a2ac4678acffca7230b905ea&count=1&owner_id=-229724015&v=5.131');
+        const access_token = this.configService.getOrThrow<string>('VK_ACCESS_TOKEN');
+        const response: AxiosResponse<{response: {items: {text?: string, id: number, date: number}[]}}> = await axios.get(
+          `https://api.vk.com/method/wall.get?access_token=${access_token}&count=7&owner_id=${groupId}&v=5.131`);
 
         if (!response.data.response || !response.data.response.items) {
             throw new Error('Invalid response from VK API');
@@ -183,16 +186,13 @@ async parsePosts(groupId: string): Promise<string> {
             .filter((post: any) => new Date(post.date * 1000) >= firstDayOfMonth)
             .map((post: any) => {
                 console.log(`Found post with ID: ${post.id}`);
-                const text = post.text || '';
+                const text = (post.text || '').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
                 const attachments = post.attachments || [];
-                const photos = attachments
-                    .filter((att: any) => att.type === 'photo')
-                    .map((att: any) => att.photo.sizes[att.photo.sizes.length - 1].url)
-                    .join('\n');
+                const postUrl = `https://vk.com/${groupId}?w=wall${groupNumber}_${post.id}`;
 
-                return `Пост: ${text}`
+                return `Пост: ${text} | ID: ${post.id} | URL: ${postUrl}`;
             })
-            .join(', ');
+            .join('\n'); // Use newline as separator instead of comma
 
         return posts;
     } catch (error) {

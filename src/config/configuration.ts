@@ -10,4 +10,7 @@ export default () => ({
     adminPassword: process.env.ADMIN_PASSWORD || '',
     workerPassword: process.env.WORKER_PASSWORD || '',
     VK_GROUP_ID: process.env.VK_GROUP_ID || '',
+    VK_ACCESS_TOKEN: process.env.VK_ACCESS_TOKEN || '',
+    VK_GROUP_NUMBER: process.env.VK_GROUP_NUMBER || '',
+    serverUrl: process.env.SERVER_URL || '',
 });

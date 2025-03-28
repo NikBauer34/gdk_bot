@@ -14,17 +14,17 @@ datasource db {
 }
 
 model Admin {
-  id        String    @id
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  workers   Worker[]
-  messages  Message[]
-  news_amount Int @default(7)
-  request_times            DateTime[]
-  request_max_symbols      Int @default(110)
-  total_request_amount     Int
-  total_tokens_comp_amount Int
-  total_tokens_emb_amount  Int
+  id                      String   @id
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  workers                 Worker[]
+  messages                Message[]
+  news_amount             Int @default(7)
+  total_request_amount    Int      @default(0)
+  total_tokens_comp_amount Int     @default(0)
+  total_tokens_emb_amount Int      @default(0)
+  request_max_symbols     Int      @default(1000)
+  requests_data           Json[]   @default([])
 
   @@map("admin")
 }
