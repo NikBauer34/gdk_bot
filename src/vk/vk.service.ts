@@ -1133,6 +1133,7 @@ export class VkService implements OnModuleInit {
                         );
                         }
                     } catch (error) {
+                        await context.send(error)
                         return await context.send('Ошибка при обновлении данных. Попробуйте позже.');
                     }
                 }

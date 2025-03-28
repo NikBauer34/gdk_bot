@@ -76,6 +76,19 @@ export class YandexService {
     
     async getAnswer(question: string, content: string): Promise<{text: string, tokens: number}> {
         try {
+            function getCurrentDateFormatted() {
+                const now = new Date();
+                const day = now.getDate();
+                const month = now.getMonth();
+                const year = now.getFullYear();
+              
+                const months = [
+                  "января", "февраля", "марта", "апреля", "мая", "июня",
+                  "июля", "августа", "сентября", "октября", "ноября", "декабря"
+                ];
+              
+                return `${day} ${months[month]} ${year}`;
+              }
             console.log(content);
             console.log(question);
             const response: AxiosResponse<YandexCompDto> = await this.axiosInstance.post('https://llm.api.cloud.yandex.net/foundationModels/v1/completion', {

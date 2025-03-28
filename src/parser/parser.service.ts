@@ -7,7 +7,7 @@ import { SECTIONS } from 'src/config/sections';
 @Injectable()
 export class ParserService {
   constructor(private readonly configService: ConfigService) {}
-
+ 
   async parseSection(url: string, parserFunction: string): Promise<string> {
     try {
       const response = await axios.get(url);
@@ -27,7 +27,19 @@ export class ParserService {
   }
   async parseEvents($: cheerio.CheerioAPI): Promise<string> {
     try {
-
+       function translateDate(dateString) {
+        const dateParts = dateString.split('-');
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10);
+        const day = parseInt(dateParts[2], 10);
+      
+        const months = [
+          "января", "февраля", "марта", "апреля", "мая", "июня",
+          "июля", "августа", "сентября", "октября", "ноября", "декабря"
+        ];
+      
+        return `${day} ${months[month - 1]} ${year}`;
+      }
       let eventsString = "";
       const currentDate = new Date();
       const monthLater = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, currentDate.getDate());
@@ -49,7 +61,9 @@ export class ParserService {
           }
 
               const formattedDate = `${eventDate.getFullYear()}-${(eventDate.getMonth() + 1).toString().padStart(2, '0')}-${eventDate.getDate().toString().padStart(2, '0')}`;
-              eventsString += `Событие: ${eventName}, дата: ${formattedDate}; `;
+              console.log(formattedDate, eventName)
+              
+              eventsString += `Событие: ${eventName}, дата: ${translateDate(formattedDate)}; `;
       });
 
       return eventsString.slice(0, -2);
@@ -124,6 +138,19 @@ try {
       const month = String(now.getMonth() + 1).padStart(2, '0'); // Получаем номер месяца (0-11), добавляем 1, форматируем
   const year = now.getFullYear();
       let eventNames: string[] = [];
+      function translateDate(dateString) {
+        const dateParts = dateString.split('-');
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10);
+        const day = parseInt(dateParts[2], 10);
+      
+        const months = [
+          "января", "февраля", "марта", "апреля", "мая", "июня",
+          "июля", "августа", "сентября", "октября", "ноября", "декабря"
+        ];
+      
+        return `${day} ${months[month - 1]} ${year}`;
+      }
 
       // Извлекаем названия событий (из тегов <a> с классом 'item' внутри элемента с классом 'list-item')
       $eventPage('.list-item .item').each((i, el) => {
@@ -132,8 +159,8 @@ try {
       });
 
       if (eventNames.length > 0) {
-          
-            eventNames.forEach((el) => eventsString += `Событие: ${el} проходит: ${dateText}.${month}.${year}; `)
+          console.log(year + '-' + month + '-' + dateText.padStart(2, '0'))
+            eventNames.forEach((el) => eventsString += `Событие: ${el} проходит: ${translateDate(year + '-' + month + '-' + dateText.padStart(2, '0'))} `)
           
       }
   }
