@@ -291,17 +291,18 @@ export class VkService implements OnModuleInit {
                             console.log('Best matching section content:', sectionContent);
                             
                             // If the closest section is either Мероприятия, События or Новости, include all sections
-                            if (mostRelevantSection.name === "Мероприятия" || mostRelevantSection.name === "События" || mostRelevantSection.name === "Новости") {
+                            if (mostRelevantSection.name === "Мероприятия" || mostRelevantSection.name === "События" || mostRelevantSection.name === "Коллективы") {
                                 const allSections = await this.crawlerService.getSectionsData();
                                 const meropriyatiyaSection = allSections.find(s => s.name === "Мероприятия");
                                 const sobytiyaSection = allSections.find(s => s.name === "События");
-                                const novostiSection = allSections.find(s => s.name === "Новости");
+                                const novostiSection = allSections.find(s => s.name === "Коллективы");
                                 
                                 if (meropriyatiyaSection && sobytiyaSection && novostiSection) {
                                     sectionContent = `${meropriyatiyaSection.content}\n\n${sobytiyaSection.content}\n\n${novostiSection.content}`;
-                                    console.log('Combined Мероприятия, События and Новости content:', sectionContent);
+                                    console.log('Combined Мероприятия, События and Коллективы content:', sectionContent);
                                 }
                             }
+                            console.log('hi')
                             console.log(sectionContent)
                             const answer = await this.yandexService.getAnswer(text, sectionContent);
 
@@ -739,15 +740,15 @@ export class VkService implements OnModuleInit {
                                 console.log('Best matching section content:', contentToUse);
                                 
                                 // If the closest section is either Мероприятия, События or Новости, include all sections
-                                if (bestSection.name === "Мероприятия" || bestSection.name === "События" || bestSection.name === "Новости") {
+                                if (bestSection.name === "Мероприятия" || bestSection.name === "События" || bestSection.name === "Коллективы") {
                                     const sections = await this.crawlerService.getSectionsData();
                                     const meropriyatiya = sections.find(s => s.name === "Мероприятия");
                                     const sobytiya = sections.find(s => s.name === "События");
-                                    const novosti = sections.find(s => s.name === "Новости");
+                                    const novosti = sections.find(s => s.name === "Коллективы");
                                     
                                     if (meropriyatiya && sobytiya && novosti) {
                                         contentToUse = `${meropriyatiya.content}\n\n${sobytiya.content}\n\n${novosti.content}`;
-                                        console.log('Combined Мероприятия, События and Новости content:', contentToUse);
+                                        console.log('Combined Мероприятия, События and Коллективы content:', contentToUse);
                                     }
                                 }
 
@@ -840,11 +841,11 @@ export class VkService implements OnModuleInit {
                                 console.log('Best matching section content:', contentToUse);
                                 
                                 // If the closest section is either Мероприятия, События or Новости, include all sections
-                                if (bestSection.name === "Мероприятия" || bestSection.name === "События" || bestSection.name === "Новости") {
+                                if (bestSection.name === "Мероприятия" || bestSection.name === "События" || bestSection.name === "Коллективы") {
                                     const sections = await this.crawlerService.getSectionsData();
                                     const meropriyatiya = sections.find(s => s.name === "Мероприятия");
                                     const sobytiya = sections.find(s => s.name === "События");
-                                    const novosti = sections.find(s => s.name === "Новости");
+                                    const novosti = sections.find(s => s.name === "Коллективы");
                                     
                                     if (meropriyatiya && sobytiya && novosti) {
                                         contentToUse = `${meropriyatiya.content}\n\n${sobytiya.content}\n\n${novosti.content}`;

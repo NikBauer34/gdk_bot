@@ -20,7 +20,7 @@ export const SECTIONS: {name: string, url: string, imageUrl: string, description
       url: "https://kdk-krasnoturinsk.ru",
       user_url: "https://kdk-krasnoturinsk.ru/#c-left-menu",
       parserFunction: "parseDateEvents",
-      imageUrl: "https://postimg.su/image/ZueMwSkw/%D0%91%D0%B5%D0%B7%D0%B9.png",
+      imageUrl: "https://i.postimg.cc/KjCnJwLm/six.png",
       description: "Новые меороприятия"
     }, 
     {
@@ -28,7 +28,55 @@ export const SECTIONS: {name: string, url: string, imageUrl: string, description
       url: "https://kdk-krasnoturinsk.ru",
       user_url: "https://kdk-krasnoturinsk.ru/#logos-gallery",
       parserFunction: "parseLinks",
-      imageUrl: "https://postimg.su/image/Znod1Gsy/%D0%91%D0%B5%D0%B7%D0%BC%D1%8F%D0%BD%D0%BD%D1%8B%D0%B9.png",
+      imageUrl: "https://i.postimg.cc/h4dmbSMd/oo.png",
       description: "Ссылки на ресурсы"
+    },
+    {
+      name: "Структура",
+      url: "https://kdk-krasnoturinsk.ru/structure",
+      user_url: "https://kdk-krasnoturinsk.ru/structure/#content",
+      parserFunction: "parseStructure",
+      imageUrl: "https://i.postimg.cc/PrsJQYFW/io.png",
+      description: "Здания ГДК"
+    },
+    {
+      name: "УЧРЕДИТЕЛЬНЫЕ ДОКУМЕНТЫ",
+      url: "https://kdk-krasnoturinsk.ru/activities",
+      user_url: "https://kdk-krasnoturinsk.ru/activities/#content",
+      parserFunction: "parseFilesListLinks",
+      imageUrl: "https://i.postimg.cc/TY0y2hCn/seven.png",
+      description: "файлы"
+    },
+    {
+      name: "Архив событий",
+      url: "https://kdk-krasnoturinsk.ru/documents",
+      user_url: "https://kdk-krasnoturinsk.ru/documents/#content",
+      parserFunction: "parseEventsFromPage",
+      imageUrl: "https://i.postimg.cc/9fgms7XQ/ei.png",
+      description: "Прошедшие события"
+    },
+    {
+      name: "Афиша",
+      url: "https://kdk-krasnoturinsk.ru/servicies",
+      user_url: "https://kdk-krasnoturinsk.ru/servicies/#content",
+      parserFunction: "parseAfisha",
+      imageUrl: "https://i.postimg.cc/pVYpWkZm/ten.png",
+      description: "АФИШИ ГДК"
+    },
+    {
+      name: "Телефоны",
+      url: "https://kdk-krasnoturinsk.ru/contacts",
+      user_url: "https://kdk-krasnoturinsk.ru/contacts/#content",
+      parserFunction: "parsePhoneSpans",
+      imageUrl: "https://i.postimg.cc/0Q7d2mW9/elev.png",
+      description: "Контакты"
+    },
+    {
+      name: "Коллективы",
+      url: "https://kdk-krasnoturinsk.ru/media",
+      user_url: "https://kdk-krasnoturinsk.ru/media/#content",
+      parserFunction: "parseCollectives",
+      imageUrl: "https://i.postimg.cc/yxZhxGVg/twel.png",
+      description: "Коллективы ГДК, расписания занятий, награды"
     }
 ];

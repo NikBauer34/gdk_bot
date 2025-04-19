@@ -21,7 +21,7 @@ export class ParserService {
       return await parsingFunction($);
 
     } catch (error) {
-      console.error(`Error parsing ${url}: ${error.message}`);
+      console.error(`Error in parseSection while parsing ${url}: ${error.message}`);
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -69,7 +69,7 @@ export class ParserService {
       return eventsString.slice(0, -2);
 
   } catch (error) {
-    console.error(`Ошибка при парсинге данных: ${error.message}`);
+    console.error(`Error in parseEvents: ${error.message}`);
     throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
@@ -85,13 +85,13 @@ try {
     });
 
     if (newsText) {
-      resultString += `Новость: ${newsText.trim()}; `; // Добавляем к результирующей строке
+      resultString += `Новость: ${newsText.trim().replace('Афиша', '')}; `; // Добавляем к результирующей строке
     }
   });
 
   return resultString.trim();
 }  catch (error) {
-  console.error(`Ошибка при парсинге данных: ${error.message}`);
+  console.error(`Error in parseNews: ${error.message}`);
   throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
 }
 
@@ -167,7 +167,7 @@ try {
   console.log(eventsString);
   return eventsString;
 } catch (error) {
-console.error(`Ошибка при парсинге данных: ${error.message}`);
+console.error(`Error in parseDateEvents: ${error.message}`);
 throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
 }
 }
@@ -192,7 +192,7 @@ try {
 
   return resourcesString;
 } catch (error) {
-console.error(`Ошибка при парсинге данных: ${error.message}`);
+console.error(`Error in parseLinks: ${error.message}`);
 throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
 }
 }
@@ -223,8 +223,252 @@ async parsePosts(groupId: string, groupNumber: string): Promise<string> {
 
         return posts;
     } catch (error) {
-        console.error('Error parsing posts:', error);
+        console.error(`Error in parsePosts: ${error.message}`);
         throw new HttpException('Ошибка при получении постов', HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
+
+async parseStructure($: cheerio.CheerioAPI): Promise<string> {
+  try {
+    function parseCultureDivisions($: cheerio.CheerioAPI) {
+      const divisions: string[] = [];
+
+      // Выбираем элемент div с классом 'description' и ищем в нем все span с font-size: 18pt
+      $('.description span[style*="font-size: 18pt"]').each((index, element) => {
+        const text = $(element).text().trim();
+
+        // Проверяем, что текст начинается с дефиса или является допустимым именем подразделения
+        if (text.startsWith('-') || text.includes('Краснотурьинск')) {
+          // Удаляем дефис и лишние пробелы в начале строки
+          const division = text.replace(/^-?\s*/, '').trim();
+
+          // Добавляем только непустые строки
+          if (division) {
+            divisions.push(division);
+          }
+        }
+      });
+
+      // Фильтрация и корректировка названий (зависит от структуры HTML)
+
+      // Соединяем названия подразделений в строку, разделенную пробелами
+      return divisions.join(' ');
+    }
+
+    const structureInfo = parseCultureDivisions($);
+    return structureInfo;
+  } catch (error) {
+    console.error(`Error in parseStructure: ${error.message}`);
+    throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
+
+async parseFilesListLinks($: cheerio.CheerioAPI): Promise<string> {
+  try {
+    function joinUrl(baseUrl: string, relativeUrl: string) {
+      if (typeof baseUrl !== 'string' || typeof relativeUrl !== 'string') {
+        throw new Error('Both baseUrl and relativeUrl must be strings.');
+      }
+    
+      // Remove trailing slashes from the base URL.
+      const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    
+      // Remove leading slashes from the relative URL.
+      const relative = relativeUrl.startsWith('/') ? relativeUrl.slice(1) : relativeUrl;
+    
+      // Combine the base and relative parts.
+      return `${base}/${relative}`;
+    }
+    const links: string[] = [];
+
+    // Находим все элементы <a> внутри div с классом std-files-list
+    $('.std-files-list a.file').each((index, element) => {
+      const href = $(element).attr('href') || ''; // Получаем атрибут href
+      const filename = $(element).find('.caption span').text().trim(); // Получаем имя файла из caption
+      const needed = SECTIONS.find(section => section.name === 'Мероприятия')
+      const absoluteDateLink = joinUrl(needed?.url ?? '', href)
+      links.push(`Файл:${filename}, Ссылка:${absoluteDateLink}`); // Формируем строку в нужном формате
+    });
+
+    // Соединяем все строки ссылок в одну, разделенную точкой с запятой
+    return links.join('; ');
+  } catch (error) {
+    console.error(`Error in parseFilesListLinks: ${error.message}`);
+    throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
+
+async parseEventsFromPage($: cheerio.CheerioAPI): Promise<string> {
+  try {
+    async function parseEventDetails(url: string): Promise<{ title: string; date: string }[]> {
+      try {
+        function formatArchiveDate(dateString: string): string {
+          if (!dateString) return '';
+        
+          const parts = dateString.replace('-', '').trim().split('.');
+          if (parts.length !== 3) return dateString;
+        
+          const day = parseInt(parts[0], 10);
+          const monthIndex = parseInt(parts[1], 10) - 1;
+          const year = parseInt(parts[2], 10);
+        
+          const months = [
+            'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+            'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+          ];
+        
+          if (isNaN(day) || isNaN(monthIndex) || isNaN(year) || day < 1 || day > 31 || monthIndex < 0 || monthIndex > 11) {
+            return dateString;
+          }
+        
+          return `${day} ${months[monthIndex]} ${year} год`;
+        }
+        const response = await axios.get(url);
+        const $ = cheerio.load(response.data);
+        const events: { title: string; date: string }[] = [];
+    
+        $('.list-item').each((i, el) => {
+          const title = $(el).find('.caption a').text().trim();
+          let dateText = $(el).find('.item-content p.date').text().trim();
+          const date = formatArchiveDate(dateText);
+    
+          if (title && date) {
+            events.push({ title, date });
+          }
+        });
+    
+        return events;
+      } catch (error) {
+        console.error(`Error in parseEventDetails while fetching data from ${url}: ${error.message}`);
+        return [];
+      }
+    }
+    const archiveLinks: { url: string; text: string }[] = [];
+
+    // Находим все ссылки на архивы мероприятий
+    $('p a[href][target="_blank"]').each((i, el) => {
+      let href = $(el).attr('href');
+      const text = $(el).text().trim();
+      if (href?.length && href.length < 10){
+        href = 'https://kdk-krasnoturinsk.ru' + href
+      }
+      if (text.toUpperCase().includes('АРХИВ') && href) {
+        archiveLinks.push({ url: href, text });
+      }
+    });
+
+    let resultString = '';
+    console.log('archiveLinks')
+    console.log(archiveLinks)
+
+    for (const linkData of archiveLinks) {
+      try {
+        const { url, text } = linkData;
+        const events = await parseEventDetails(url);
+        if (events && events.length > 0) {
+          const eventString = events.map(event => `${event.title} (${event.date})`).join(', ');
+
+          let houseOfCulture = 'Неизвестный ДК';
+          if (text.toUpperCase().includes('ГОРОДСКОГО ДВОРЦА')) {
+            houseOfCulture = 'Городской дворец';
+          } else if (text.toUpperCase().includes('ДК "ИНДЕКС"')) {
+            houseOfCulture = 'ДК "индекс"';
+          } else if (text.toUpperCase().includes('ЦК "ШАНС"')) {
+            houseOfCulture = 'ЦК "шанс"';
+          }
+          if (eventString.includes('2024')){
+            resultString += `${houseOfCulture}: ${eventString}; `;
+          }
+          
+        }
+      } catch (error) {
+        console.error(`Error in parseEventsFromPage while processing link ${linkData.url}: ${error.message}`);
+      }
+    }
+    
+    return resultString.trim().slice(0, -1).substring(0, 350);
+  } catch (error) {
+    console.error(`Error in parseEventsFromPage: ${error.message}`);
+    throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
+
+
+parseAfisha($: cheerio.CheerioAPI) {
+  let resultString = '';
+
+  $('.item-content.pub-item').each((index, element) => {
+    const $element = $(element);
+    const text = $element.find('.caption a.item').text().trim();
+    const link = $element.find('.caption a.item').attr('href');
+
+    if (text && link) {
+      resultString += `Афиша: ${text}, ссылка: ${'https://kdk-krasnoturinsk.ru' + link}; `;
+    }
+  });
+
+  return resultString.trim().slice(0, -1); // Убираем последний символ (";") и пробел.
+}
+parsePhoneSpans($: cheerio.CheerioAPI) {
+  const phoneTexts: string[] = [];
+
+  $('div.description > div > span').each((index, element) => {
+    const $element = $(element);
+    const text = $element.text().trim();
+
+    if (text.toLowerCase().startsWith('телефон')) {
+      phoneTexts.push(text);
+    }
+  });
+
+  return phoneTexts.join(' ');
+}
+async parseCollectives($: cheerio.CheerioAPI, baseUrl = 'https://kdk-krasnoturinsk.ru') {
+  async function parseCollectiveDetails(url: string) {
+    try {
+      const response = await axios.get(url);
+      const $ = cheerio.load(response.data);
+  
+      let scheduleLink = 'нет';
+      let awardsLink = 'нет';
+  
+      $('div.description a').each((index, element) => {
+        const $element = $(element);
+        const text = $element.text().trim().toUpperCase();
+        const href = $element.attr('href');
+  
+        if (text.includes('РАСПИСАНИЕ ЗАНЯТИЙ')) {
+          scheduleLink = href ? baseUrl + href : 'нет'; //  Проверка на null/undefined
+        } else if (text.includes('НАГРАДЫ КОЛЛЕКТИВА')) {
+          awardsLink = href ? baseUrl + href : 'нет'; // Проверка на null/undefined
+        }
+      });
+  
+      return { scheduleLink, awardsLink };
+    } catch (error) {
+      console.error(`Ошибка при загрузке или парсинге страницы коллектива ${url}:`, error);
+      return { scheduleLink: 'нет', awardsLink: 'нет' }; // Возвращаем значения по умолчанию в случае ошибки
+    }
+  }
+  let resultString = '';
+
+  for (const element of $('.list-item').toArray()) {
+    const $element = $(element);
+    const linkContainer = $element.find('a.link-container');
+    const name = $element.find('span.caption').text().trim();
+    const relativeLink = linkContainer.attr('href');
+
+    if (name && relativeLink) {
+      const absoluteLink = baseUrl + relativeLink; // Формируем абсолютный URL
+      const { scheduleLink, awardsLink } = await parseCollectiveDetails(absoluteLink);
+
+      resultString += `Коллектив: ${name}, описание: ${absoluteLink}, расписание занятий (ссылка): ${scheduleLink}, награды коллектива (ссылка): ${awardsLink}; `;
+    }
+  }
+
+  return resultString.trim().slice(0, -1); // Убираем последний символ (";") и пробел.
+}
+
+
+
 }
